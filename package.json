@@ -1,0 +1,23 @@
+{
+  "name": "itinerary-publisher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.coffee",
+  "scripts": {
+    "start": "coffee index.coffee",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "William Chen",
+  "license": "ISC",
+  "dependencies": {
+    "array-unique": "^0.2.1",
+    "async": "^1.5.2",
+    "aws-sdk": "^2.3.18",
+    "fast-csv": "^2.0.0",
+    "ftp": "^0.3.10",
+    "graceful-fs": "^4.1.4",
+    "iconv-lite": "^0.4.13",
+    "moment": "^2.13.0",
+    "vair_log": "git+ssh://git@bitbucket.org/vair/vair_log.git"
+  }
+}
