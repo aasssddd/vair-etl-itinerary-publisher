@@ -18,4 +18,4 @@ module.exports =
 		region: "us-east-1"
 		API_VERSION: "2012-11-05"
 
-	message_size: 200
+	message_size: 50

@@ -18,7 +18,7 @@ c.on 'ready', () ->
 		if err?
 			return log.error "ftp connect error: #{err}"
 		else
-			log.info "work directory is setting to #{currentDir}"
+			log.info "ftp work directory is setting to #{currentDir}"
 
 			beginDate = moment().add -1, 'day'
 			endDate = moment().add -1, 'day'
@@ -48,43 +48,51 @@ c.on 'ready', () ->
 					filePrefix = "#{day}__"
 					log.info "retrieve ftp file: #{filePrefix}#{fileName}"
 
-					c.get "#{filePrefix}#{fileName}", (err, stream) ->
-						if err?
-							return log.error "retrieve file #{filePrefix}#{fileName} error: #{err}"
+					c.get "#{filePrefix}#{fileName}", (ftpGetErr, stream) ->
+						if ftpGetErr?
+							return log.error "retrieve file #{filePrefix}#{fileName} error: #{ftpGetErr}"
 						csv = require 'fast-csv'
 						csvStream = csv {delimiter: ';', ignoreEmpty: true}
-						.on 'data', (data) ->
+						csvStream.on 'data', (data) ->
 							if data[index]?
 								log.debug "#{fileName}, #{index}, #{iconv.decode(data[index], 'utf-16')}"
 								pnrlist.push iconv.decode(data[index], 'utf-16')
 								# pnrlist.push data[col]
-						.on 'data-invalid', (data) ->
+						csvStream.on 'data-invalid', (data) ->
 							log.warn "invalid data #{data}"
-						.on 'end', () ->
+						csvStream.on 'end', () ->
 							log.info "#{filePrefix} data parsed"
 							unique pnrlist
 							callback null
 						stream.pipe csvStream
 
-				, (err) ->
+				, (iterErr) ->
 					if err?
-						log.error "#{err}"
+						log.error "#{iterErr}"
 					log.info "data parsed"
 					cb null
 
-			, (err) ->
-				if err?
-					log.error "#{err}"
+			, (pnrSourceErr) ->
+				if pnrSourceErr?
+					log.error "#{pnrSourceErr}"
 				c.end()
 
 c.on 'error', (err) ->
 	log.error "error: #{err}"
-c.on 'end', () ->
+c.on 'close', () ->
+	log.info "end of retrieving PNR from FTP"
+	log.info "before unique pnr length: #{pnrlist.length}"
 	unique pnrlist
-	log.info "PNR length: #{pnrlist.length}"
+	log.info "after unique pnr length: #{pnrlist.length}"
 
 	# split into 
 	msg_size = config.message_size
+
+	publisher = new Publisher {
+			accessKeyId: config.aws.accessKeyId,
+			secretAccessKey: config.aws.secretAccessKey
+			region: config.aws.region
+		}
 
 	async.whilst () ->
 		return pnrlist.length > 0
@@ -92,12 +100,6 @@ c.on 'end', () ->
 		subPnrlist = pnrlist.splice 0, msg_size
 		message = 
 			pnrlst: subPnrlist
-
-		publisher = new Publisher {
-			accessKeyId: config.aws.accessKeyId,
-			secretAccessKey: config.aws.secretAccessKey
-			region: config.aws.region
-		}
 
 		publisher.send config.aws.queueUrl, "#{JSON.stringify message}", (err, data) ->
 			if err?
